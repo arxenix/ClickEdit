@@ -1,0 +1,9 @@
+name: ClickEdit
+version: 0.5
+description: Edit signs with a click!
+author: bobacadodl
+main: com.bobacadodl.ClickEdit.ClickEdit
+depend: [ProtocolLib]
+commands:
+  clickedit:
+    description: Edit the sign you are looking at.
