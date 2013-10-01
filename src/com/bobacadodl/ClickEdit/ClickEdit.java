@@ -63,6 +63,7 @@ public class ClickEdit extends JavaPlugin implements Listener {
             for (int i = 0; i < event.getLines().length; i++) {
                 event.setLine(i, ChatColor.translateAlternateColorCodes('&', event.getLines()[i]));
             }
+            //TODO add icons/symbols :D
         }
     }
 
@@ -93,6 +94,10 @@ public class ClickEdit extends JavaPlugin implements Listener {
                         //edit the sign they're looking at
                         if (sender instanceof Player) {
                             Player p = (Player) sender;
+                            if(!p.hasPermission("clickedit.edit")){
+                                p.sendMessage(ChatColor.RED+"You do not have permission! (clickedit.edit)");
+                                return true;
+                            }
                             Block block = p.getTargetBlock(null, 8);
                             if (isSign(block)) {
                                 Sign sign = (Sign) block.getState();
@@ -108,6 +113,10 @@ public class ClickEdit extends JavaPlugin implements Listener {
                         if (args.length >= 3) {
                             if (sender instanceof Player) {
                                 Player p = (Player) sender;
+                                if(!p.hasPermission("clickedit.edit")){
+                                    p.sendMessage(ChatColor.RED+"You do not have permission! (clickedit.edit)");
+                                    return true;
+                                }
                                 if (isInt(args[1])) {
                                     int line = Integer.parseInt(args[1]) - 1;
                                     if (line >= 0 && line < 4) {
