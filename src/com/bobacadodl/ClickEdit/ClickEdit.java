@@ -1,5 +1,6 @@
 package com.bobacadodl.ClickEdit;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -23,6 +24,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 
 /**
  * User: bobacadodl
@@ -33,6 +35,8 @@ public class ClickEdit extends JavaPlugin implements Listener {
     SignGUI gui;
     boolean command_only = false;
 
+    public HashMap<String,String> symbols = new HashMap<String,String>();
+
     public void onEnable() {
         getServer().getPluginManager().registerEvents(this, this);
         gui = new SignGUI(this);
@@ -42,6 +46,14 @@ public class ClickEdit extends JavaPlugin implements Listener {
         }
         boolean update = getConfig().getBoolean("auto-update");
         command_only = getConfig().getBoolean("command-only");
+        //load symbols
+        for(String symbolName:getConfig().getConfigurationSection("symbols").getKeys(false)){
+            String symbol = getConfig().getString("symbols."+symbolName);
+            if(symbol.startsWith("\\")){
+                symbol = StringEscapeUtils.unescapeJava(symbol);
+            }
+            symbols.put(symbolName,symbol);
+        }
         if (update) {
             Updater updater = new Updater(this, "clickedit", this.getFile(), Updater.UpdateType.DEFAULT, false);
         }
@@ -63,7 +75,16 @@ public class ClickEdit extends JavaPlugin implements Listener {
             for (int i = 0; i < event.getLines().length; i++) {
                 event.setLine(i, ChatColor.translateAlternateColorCodes('&', event.getLines()[i]));
             }
-            //TODO add icons/symbols :D
+        }
+        if (event.getPlayer().hasPermission("clickedit.symbols")) {
+            for (int i = 0; i < event.getLines().length; i++) {
+                String line = event.getLine(i);
+                for(String symbolName:symbols.keySet()){
+                    event.getPlayer().sendMessage(symbolName);
+                    line = line.replace("("+symbolName+")",symbols.get(symbolName));
+                }
+                event.setLine(i,line);
+            }
         }
     }
 
@@ -75,6 +96,11 @@ public class ClickEdit extends JavaPlugin implements Listener {
                 Block b = event.getClickedBlock();
                 if (b != null) {
                     if (b.getState() instanceof Sign) {
+                        if(event.getPlayer().getItemInHand()!=null){
+                            if(event.getPlayer().getItemInHand().getType()==Material.SIGN){
+                                return;
+                            }
+                        }
                         Sign sign = (Sign) b.getState();
                         editSign(sign, p, sign.getLines());
                     }
@@ -95,7 +121,7 @@ public class ClickEdit extends JavaPlugin implements Listener {
                         if (sender instanceof Player) {
                             Player p = (Player) sender;
                             if(!p.hasPermission("clickedit.edit")){
-                                p.sendMessage(ChatColor.RED+"You do not have permission! (clickedit.edit)");
+                                p.sendMessage(ChatColor.RED + "You do not have permission! (clickedit.edit)");
                                 return true;
                             }
                             Block block = p.getTargetBlock(null, 8);
