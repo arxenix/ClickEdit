@@ -9,6 +9,10 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.*;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 
@@ -18,24 +22,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class SignGUI {
+public class SignGUI implements Listener {
 
     protected ProtocolManager protocolManager;
     protected PacketAdapter packetListener;
     protected Map<String, SignGUIListener> listeners;
     protected Map<String, Vector> signLocations;
 
-    public SignGUI(Plugin plugin) {
+    public SignGUI(Plugin plugin){
+        this(plugin,true);
+    }
+
+    public SignGUI(Plugin plugin, boolean cleanup) {
         protocolManager = ProtocolLibrary.getProtocolManager();
         packetListener = new PacketListener(plugin);
         protocolManager.addPacketListener(packetListener);
         listeners = new ConcurrentHashMap<String, SignGUIListener>();
         signLocations = new ConcurrentHashMap<String, Vector>();
+        if(cleanup){
+            Bukkit.getPluginManager().registerEvents(this, plugin);
+        }
     }
 
     public void open(Player player, SignGUIListener response) {
         open(player, null, response);
     }
+
 
     public void open(Player player, String[] defaultText, SignGUIListener response) {
         List<PacketContainer> packets = new ArrayList<PacketContainer>();
@@ -80,6 +92,16 @@ public class SignGUI {
         protocolManager.removePacketListener(packetListener);
         listeners.clear();
         signLocations.clear();
+    }
+
+    public void cleanupPlayer(Player player){
+        listeners.remove(player.getName());
+        signLocations.remove(player.getName());
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event){
+        cleanupPlayer(event.getPlayer());
     }
 
     public interface SignGUIListener {

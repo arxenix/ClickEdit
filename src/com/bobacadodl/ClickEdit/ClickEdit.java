@@ -34,8 +34,7 @@ import java.util.HashMap;
 public class ClickEdit extends JavaPlugin implements Listener {
     SignGUI gui;
     boolean command_only = false;
-
-    public HashMap<String,String> symbols = new HashMap<String,String>();
+    boolean enable_updater = true;
 
     public void onEnable() {
         getServer().getPluginManager().registerEvents(this, this);
@@ -44,18 +43,10 @@ public class ClickEdit extends JavaPlugin implements Listener {
             this.saveDefaultConfig();
             reloadConfig();
         }
-        boolean update = getConfig().getBoolean("auto-update");
         command_only = getConfig().getBoolean("command-only");
-        //load symbols
-        for(String symbolName:getConfig().getConfigurationSection("symbols").getKeys(false)){
-            String symbol = getConfig().getString("symbols."+symbolName);
-            if(symbol.startsWith("\\")){
-                symbol = StringEscapeUtils.unescapeJava(symbol);
-            }
-            symbols.put(symbolName,symbol);
-        }
-        if (update) {
-            Updater updater = new Updater(this, "clickedit", this.getFile(), Updater.UpdateType.DEFAULT, false);
+        enable_updater = getConfig().getBoolean("enable-updater");
+        if(enable_updater){
+            Updater updater = new Updater(this, 66207, this.getFile(), Updater.UpdateType.DEFAULT, false);
         }
         try {
             Metrics metrics = new Metrics(this);
@@ -74,16 +65,6 @@ public class ClickEdit extends JavaPlugin implements Listener {
         if (event.getPlayer().hasPermission("clickedit.color")) {
             for (int i = 0; i < event.getLines().length; i++) {
                 event.setLine(i, ChatColor.translateAlternateColorCodes('&', event.getLines()[i]));
-            }
-        }
-        if (event.getPlayer().hasPermission("clickedit.symbols")) {
-            for (int i = 0; i < event.getLines().length; i++) {
-                String line = event.getLine(i);
-                for(String symbolName:symbols.keySet()){
-                    event.getPlayer().sendMessage(symbolName);
-                    line = line.replace("("+symbolName+")",symbols.get(symbolName));
-                }
-                event.setLine(i,line);
             }
         }
     }
@@ -135,7 +116,7 @@ public class ClickEdit extends JavaPlugin implements Listener {
                             sender.sendMessage(ChatColor.DARK_AQUA + "[" + ChatColor.AQUA + "ClickEdit" + ChatColor.DARK_AQUA + "] " + ChatColor.RED + "ERROR- Must be a player!");
                         }
                     } else {
-                        //edit line with command... why, idk
+                        //edit line with command... cause why not
                         if (args.length >= 3) {
                             if (sender instanceof Player) {
                                 Player p = (Player) sender;
@@ -178,12 +159,13 @@ public class ClickEdit extends JavaPlugin implements Listener {
     }
 
     public boolean isInt(String s) {
-        try {
+        /*try {
             Integer.parseInt(s);
             return true;
         } catch (NumberFormatException e) {
             return false;
-        }
+        }*/
+        return StringUtils.isNumeric(s);
     }
 
     public boolean isSign(Block block) {
@@ -226,21 +208,26 @@ public class ClickEdit extends JavaPlugin implements Listener {
         return true;
     }
 
+    public boolean canBreak(Player p, Block b){
+        BlockBreakEvent breakEvent = new BlockBreakEvent(b, p);
+        Bukkit.getServer().getPluginManager().callEvent(breakEvent);
+        return !breakEvent.isCancelled();
+    }
+
+    public boolean canPlace(Player p, Block b, ItemStack toPlace){
+        BlockPlaceEvent placeEvent = new BlockPlaceEvent(b, b.getState(), b.getRelative(BlockFace.DOWN),toPlace, p, false);
+        Bukkit.getServer().getPluginManager().callEvent(placeEvent);
+        return !placeEvent.isCancelled();
+    }
+
     public boolean editSign(final Sign sign, final Player p, String... initLines) {
         final Location signLoc = sign.getLocation();
         Block signBlock = sign.getBlock();
-        BlockBreakEvent breakEvent = new BlockBreakEvent(signBlock, p);
-        Bukkit.getServer().getPluginManager().callEvent(breakEvent);
-        if (breakEvent.isCancelled()) {
-            //cant edit sign
+        if(!canBreak(p,signBlock)){
             p.sendMessage(ChatColor.DARK_RED + "You are not allowed to edit this sign!");
             return false;
         }
-
-        BlockPlaceEvent placeEvent = new BlockPlaceEvent(signBlock, signBlock.getState(), signBlock.getRelative(BlockFace.DOWN), new ItemStack(Material.SIGN), p, false);
-        Bukkit.getServer().getPluginManager().callEvent(placeEvent);
-        if (placeEvent.isCancelled()) {
-            //cant edit sign
+        if(!canPlace(p,signBlock,new ItemStack(Material.SIGN,1))){
             p.sendMessage(ChatColor.DARK_RED + "You are not allowed to edit this sign!");
             return false;
         }

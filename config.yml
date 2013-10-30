@@ -1,2 +1,2 @@
-auto-update: true
 command-only: false
+enable-updater: true
