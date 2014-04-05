@@ -13,7 +13,9 @@ import com.bobacadodl.ClickEdit.packetwrapper.WrapperPlayServerUpdateSign;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.*;
+import com.comphenix.protocol.events.ListenerPriority;
+import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -34,8 +36,8 @@ public class SignGUI implements Listener {
     protected Map<UUID, SignGUIListener> listeners;
     protected Map<UUID, Vector> signLocations;
 
-    public SignGUI(Plugin plugin){
-        this(plugin,true);
+    public SignGUI(Plugin plugin) {
+        this(plugin, true);
     }
 
     public SignGUI(Plugin plugin, boolean cleanup) {
@@ -44,7 +46,7 @@ public class SignGUI implements Listener {
         protocolManager.addPacketListener(packetListener);
         listeners = new ConcurrentHashMap<UUID, SignGUIListener>();
         signLocations = new ConcurrentHashMap<UUID, Vector>();
-        if(cleanup){
+        if (cleanup) {
             Bukkit.getPluginManager().registerEvents(this, plugin);
         }
     }
@@ -98,13 +100,13 @@ public class SignGUI implements Listener {
         signLocations.clear();
     }
 
-    public void cleanupPlayer(Player player){
+    public void cleanupPlayer(Player player) {
         listeners.remove(player.getUniqueId());
         signLocations.remove(player.getUniqueId());
     }
 
     @EventHandler
-    public void onQuit(PlayerQuitEvent event){
+    public void onQuit(PlayerQuitEvent event) {
         cleanupPlayer(event.getPlayer());
     }
 
@@ -132,9 +134,9 @@ public class SignGUI implements Listener {
             if (v == null) return;
 
             //make sure its dat sign
-            if(updateSign.getX() != v.getBlockX()) return;
-            if(updateSign.getY() != v.getBlockY()) return;
-            if(updateSign.getZ() != v.getBlockZ()) return;
+            if (updateSign.getX() != v.getBlockX()) return;
+            if (updateSign.getY() != v.getBlockY()) return;
+            if (updateSign.getZ() != v.getBlockZ()) return;
 
             final String[] lines = updateSign.getLines();
             final SignGUIListener response = listeners.remove(event.getPlayer().getUniqueId());
