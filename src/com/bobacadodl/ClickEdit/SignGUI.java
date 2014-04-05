@@ -4,6 +4,7 @@ package com.bobacadodl.ClickEdit;
  * Created by Nisovin!
  */
 
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.*;
@@ -20,14 +21,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SignGUI implements Listener {
 
     protected ProtocolManager protocolManager;
     protected PacketAdapter packetListener;
-    protected Map<String, SignGUIListener> listeners;
-    protected Map<String, Vector> signLocations;
+    protected Map<UUID, SignGUIListener> listeners;
+    protected Map<UUID, Vector> signLocations;
 
     public SignGUI(Plugin plugin){
         this(plugin,true);
@@ -37,8 +39,8 @@ public class SignGUI implements Listener {
         protocolManager = ProtocolLibrary.getProtocolManager();
         packetListener = new PacketListener(plugin);
         protocolManager.addPacketListener(packetListener);
-        listeners = new ConcurrentHashMap<String, SignGUIListener>();
-        signLocations = new ConcurrentHashMap<String, Vector>();
+        listeners = new ConcurrentHashMap<UUID, SignGUIListener>();
+        signLocations = new ConcurrentHashMap<UUID, Vector>();
         if(cleanup){
             Bukkit.getPluginManager().registerEvents(this, plugin);
         }
@@ -57,32 +59,32 @@ public class SignGUI implements Listener {
             x = player.getLocation().getBlockX();
             z = player.getLocation().getBlockZ();
 
-            PacketContainer packet53 = protocolManager.createPacket(53);
-            packet53.getIntegers().write(0, x).write(1, y).write(2, z).write(3, 63).write(4, 0);
-            packets.add(packet53);
+            PacketContainer blockChange = protocolManager.createPacket(PacketType.Play.Server.BLOCK_CHANGE);
+            blockChange.getIntegers().write(0, x).write(1, y).write(2, z).write(3, 63).write(4, 0);
+            packets.add(blockChange);
 
-            PacketContainer packet130 = protocolManager.createPacket(130);
-            packet130.getIntegers().write(0, x).write(1, y).write(2, z);
-            packet130.getStringArrays().write(0, defaultText);
-            packets.add(packet130);
+            PacketContainer updateSign = protocolManager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
+            updateSign.getIntegers().write(0, x).write(1, y).write(2, z);
+            updateSign.getStringArrays().write(0, defaultText);
+            packets.add(updateSign);
         }
 
-        PacketContainer packet133 = protocolManager.createPacket(133);
-        packet133.getIntegers().write(0, 0).write(1, x).write(2, y).write(3, z);
-        packets.add(packet133);
+        PacketContainer openSign = protocolManager.createPacket(PacketType.Play.Server.OPEN_SIGN_ENTITY);
+        openSign.getIntegers().write(0, 0).write(1, x).write(2, y).write(3, z);
+        packets.add(openSign);
 
         if (defaultText != null) {
-            PacketContainer packet53 = protocolManager.createPacket(53);
-            packet53.getIntegers().write(0, x).write(1, y).write(2, z).write(3, 7).write(4, 0);
-            packets.add(packet53);
+            PacketContainer blockChange = protocolManager.createPacket(PacketType.Play.Server.BLOCK_CHANGE);
+            blockChange.getIntegers().write(0, x).write(1, y).write(2, z).write(3, 7).write(4, 0);
+            packets.add(blockChange);
         }
 
         try {
             for (PacketContainer packet : packets) {
                 protocolManager.sendServerPacket(player, packet);
             }
-            signLocations.put(player.getName(), new Vector(x, y, z));
-            listeners.put(player.getName(), response);
+            signLocations.put(player.getUniqueId(), new Vector(x, y, z));
+            listeners.put(player.getUniqueId(), response);
         } catch (InvocationTargetException e) {
             e.printStackTrace();
         }
@@ -95,8 +97,8 @@ public class SignGUI implements Listener {
     }
 
     public void cleanupPlayer(Player player){
-        listeners.remove(player.getName());
-        signLocations.remove(player.getName());
+        listeners.remove(player.getUniqueId());
+        signLocations.remove(player.getUniqueId());
     }
 
     @EventHandler
@@ -113,14 +115,14 @@ public class SignGUI implements Listener {
         Plugin plugin;
 
         public PacketListener(Plugin plugin) {
-            super(plugin, ConnectionSide.CLIENT_SIDE, ListenerPriority.NORMAL, 0x82);
+            super(plugin, ListenerPriority.NORMAL, PacketType.Play.Client.UPDATE_SIGN);
             this.plugin = plugin;
         }
 
         @Override
         public void onPacketReceiving(PacketEvent event) {
             final Player player = event.getPlayer();
-            Vector v = signLocations.remove(player.getName());
+            Vector v = signLocations.remove(player.getUniqueId());
             if (v == null) return;
             List<Integer> list = event.getPacket().getIntegers().getValues();
             if (list.get(0) != v.getBlockX()) return;
@@ -128,7 +130,7 @@ public class SignGUI implements Listener {
             if (list.get(2) != v.getBlockZ()) return;
 
             final String[] lines = event.getPacket().getStringArrays().getValues().get(0);
-            final SignGUIListener response = listeners.remove(event.getPlayer().getName());
+            final SignGUIListener response = listeners.remove(event.getPlayer().getUniqueId());
             if (response != null) {
                 event.setCancelled(true);
                 Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
