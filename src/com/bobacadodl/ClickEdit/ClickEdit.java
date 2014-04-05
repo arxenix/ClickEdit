@@ -30,9 +30,11 @@ import java.io.IOException;
  * Time: 5:16 PM
  */
 public class ClickEdit extends JavaPlugin implements Listener {
-    SignGUI gui;
+    private SignGUI gui;
     boolean command_only = false;
     boolean enable_updater = true;
+
+    private final int PLUGIN_ID = 66207;
 
     public void onEnable() {
         getServer().getPluginManager().registerEvents(this, this);
@@ -43,8 +45,8 @@ public class ClickEdit extends JavaPlugin implements Listener {
         }
         command_only = getConfig().getBoolean("command-only");
         enable_updater = getConfig().getBoolean("enable-updater");
-        if(enable_updater){
-            Updater updater = new Updater(this, 66207, this.getFile(), Updater.UpdateType.DEFAULT, false);
+        if (enable_updater) {
+            Updater updater = new Updater(this, PLUGIN_ID, this.getFile(), Updater.UpdateType.DEFAULT, false);
         }
         try {
             Metrics metrics = new Metrics(this);
@@ -75,8 +77,8 @@ public class ClickEdit extends JavaPlugin implements Listener {
                 Block b = event.getClickedBlock();
                 if (b != null) {
                     if (b.getState() instanceof Sign) {
-                        if(event.getPlayer().getItemInHand()!=null){
-                            if(event.getPlayer().getItemInHand().getType()==Material.SIGN){
+                        if (event.getPlayer().getItemInHand() != null) {
+                            if (event.getPlayer().getItemInHand().getType() == Material.SIGN) {
                                 return;
                             }
                         }
@@ -99,7 +101,7 @@ public class ClickEdit extends JavaPlugin implements Listener {
                         //edit the sign they're looking at
                         if (sender instanceof Player) {
                             Player p = (Player) sender;
-                            if(!p.hasPermission("clickedit.edit")){
+                            if (!p.hasPermission("clickedit.edit")) {
                                 p.sendMessage(ChatColor.RED + "You do not have permission! (clickedit.edit)");
                                 return true;
                             }
@@ -118,8 +120,8 @@ public class ClickEdit extends JavaPlugin implements Listener {
                         if (args.length >= 3) {
                             if (sender instanceof Player) {
                                 Player p = (Player) sender;
-                                if(!p.hasPermission("clickedit.edit")){
-                                    p.sendMessage(ChatColor.RED+"You do not have permission! (clickedit.edit)");
+                                if (!p.hasPermission("clickedit.edit")) {
+                                    p.sendMessage(ChatColor.RED + "You do not have permission! (clickedit.edit)");
                                     return true;
                                 }
                                 if (isInt(args[1])) {
@@ -172,27 +174,22 @@ public class ClickEdit extends JavaPlugin implements Listener {
     public boolean editSign(Sign sign, Player p, int line, String text) {
         final Location signLoc = sign.getLocation();
         Block signBlock = sign.getBlock();
-        BlockBreakEvent breakEvent = new BlockBreakEvent(signBlock, p);
-        Bukkit.getServer().getPluginManager().callEvent(breakEvent);
-        if (breakEvent.isCancelled()) {
-            //cant edit sign
+        if (!canBreak(p, signBlock)) {
+            p.sendMessage(ChatColor.DARK_RED + "You are not allowed to edit this sign!");
+            return false;
+        }
+        if (!canPlace(p, signBlock, new ItemStack(Material.SIGN, 1))) {
             p.sendMessage(ChatColor.DARK_RED + "You are not allowed to edit this sign!");
             return false;
         }
 
-        BlockPlaceEvent placeEvent = new BlockPlaceEvent(signBlock, signBlock.getState(), signBlock.getRelative(BlockFace.DOWN), new ItemStack(Material.SIGN), p, false);
-        Bukkit.getServer().getPluginManager().callEvent(placeEvent);
-        if (placeEvent.isCancelled()) {
-            //cant edit sign
-            p.sendMessage(ChatColor.DARK_RED + "You are not allowed to edit this sign!");
-            return false;
-        }
         String[] currentLines = sign.getLines();
         currentLines[line] = text;
         SignChangeEvent signChangeEvent = new SignChangeEvent(sign.getBlock(), p, currentLines);
         if (signChangeEvent.isCancelled()) {
             //cant edit sign
-            p.sendMessage(ChatColor.DARK_RED + "Sign edit cancelled!");
+            p.sendMessage(ChatColor.DARK_RED + "You can't edit this sign!");
+            return false;
         }
 
         sign.setLine(line, signChangeEvent.getLine(line));
@@ -200,14 +197,14 @@ public class ClickEdit extends JavaPlugin implements Listener {
         return true;
     }
 
-    public boolean canBreak(Player p, Block b){
+    public boolean canBreak(Player p, Block b) {
         BlockBreakEvent breakEvent = new BlockBreakEvent(b, p);
         Bukkit.getServer().getPluginManager().callEvent(breakEvent);
         return !breakEvent.isCancelled();
     }
 
-    public boolean canPlace(Player p, Block b, ItemStack toPlace){
-        BlockPlaceEvent placeEvent = new BlockPlaceEvent(b, b.getState(), b.getRelative(BlockFace.DOWN),toPlace, p, false);
+    public boolean canPlace(Player p, Block b, ItemStack toPlace) {
+        BlockPlaceEvent placeEvent = new BlockPlaceEvent(b, b.getState(), b.getRelative(BlockFace.DOWN), toPlace, p, false);
         Bukkit.getServer().getPluginManager().callEvent(placeEvent);
         return !placeEvent.isCancelled();
     }
@@ -215,11 +212,11 @@ public class ClickEdit extends JavaPlugin implements Listener {
     public boolean editSign(final Sign sign, final Player p, String... initLines) {
         final Location signLoc = sign.getLocation();
         Block signBlock = sign.getBlock();
-        if(!canBreak(p,signBlock)){
+        if (!canBreak(p, signBlock)) {
             p.sendMessage(ChatColor.DARK_RED + "You are not allowed to edit this sign!");
             return false;
         }
-        if(!canPlace(p,signBlock,new ItemStack(Material.SIGN,1))){
+        if (!canPlace(p, signBlock, new ItemStack(Material.SIGN, 1))) {
             p.sendMessage(ChatColor.DARK_RED + "You are not allowed to edit this sign!");
             return false;
         }
