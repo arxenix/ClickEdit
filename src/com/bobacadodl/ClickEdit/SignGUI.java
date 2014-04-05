@@ -2,24 +2,27 @@ package com.bobacadodl.ClickEdit;
 
 /**
  * Created by Nisovin!
+ * Updated to 1.7 by bobacadodl!
+ * ProtocolLib by Comphenix
  */
 
+import com.bobacadodl.ClickEdit.packetwrapper.WrapperPlayClientUpdateSign;
+import com.bobacadodl.ClickEdit.packetwrapper.WrapperPlayServerBlockChange;
+import com.bobacadodl.ClickEdit.packetwrapper.WrapperPlayServerOpenSignEntity;
+import com.bobacadodl.ClickEdit.packetwrapper.WrapperPlayServerUpdateSign;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.*;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,42 +55,41 @@ public class SignGUI implements Listener {
 
 
     public void open(Player player, String[] defaultText, SignGUIListener response) {
-        List<PacketContainer> packets = new ArrayList<PacketContainer>();
 
-        int x = 0, y = 0, z = 0;
+        Material block = player.getLocation().getBlock().getType();
+        byte data = player.getLocation().getBlock().getData();
+        //if setting pretext
         if (defaultText != null) {
-            x = player.getLocation().getBlockX();
-            z = player.getLocation().getBlockZ();
+            //set player location to sign block
+            WrapperPlayServerBlockChange blockChange = new WrapperPlayServerBlockChange();
+            blockChange.setLocation(player.getLocation());
+            blockChange.setBlockType(Material.SIGN_POST);
+            blockChange.sendPacket(player);
 
-            PacketContainer blockChange = protocolManager.createPacket(PacketType.Play.Server.BLOCK_CHANGE);
-            blockChange.getIntegers().write(0, x).write(1, y).write(2, z).write(3, 63).write(4, 0);
-            packets.add(blockChange);
-
-            PacketContainer updateSign = protocolManager.createPacket(PacketType.Play.Server.UPDATE_SIGN);
-            updateSign.getIntegers().write(0, x).write(1, y).write(2, z);
-            updateSign.getStringArrays().write(0, defaultText);
-            packets.add(updateSign);
+            //set sign to pretext
+            WrapperPlayServerUpdateSign updateSign = new WrapperPlayServerUpdateSign();
+            updateSign.setLocation(player.getLocation().getBlock().getLocation());
+            updateSign.setLines(defaultText);
+            updateSign.sendPacket(player);
         }
 
-        PacketContainer openSign = protocolManager.createPacket(PacketType.Play.Server.OPEN_SIGN_ENTITY);
-        openSign.getIntegers().write(0, 0).write(1, x).write(2, y).write(3, z);
-        packets.add(openSign);
+        //open dat sign
+        WrapperPlayServerOpenSignEntity openSign = new WrapperPlayServerOpenSignEntity();
+        openSign.setLocation(player.getLocation().getBlock().getLocation());
+        openSign.sendPacket(player);
 
+        //restore dat block and remove dat sign
         if (defaultText != null) {
-            PacketContainer blockChange = protocolManager.createPacket(PacketType.Play.Server.BLOCK_CHANGE);
-            blockChange.getIntegers().write(0, x).write(1, y).write(2, z).write(3, 7).write(4, 0);
-            packets.add(blockChange);
+            WrapperPlayServerBlockChange blockChange = new WrapperPlayServerBlockChange();
+            blockChange.setLocation(player.getLocation());
+            blockChange.setBlockType(block);
+            blockChange.setBlockMetadata(data);
+            blockChange.sendPacket(player);
         }
 
-        try {
-            for (PacketContainer packet : packets) {
-                protocolManager.sendServerPacket(player, packet);
-            }
-            signLocations.put(player.getUniqueId(), new Vector(x, y, z));
-            listeners.put(player.getUniqueId(), response);
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
+        //listen for da playa
+        signLocations.put(player.getUniqueId(), player.getLocation().getBlock().getLocation().toVector());
+        listeners.put(player.getUniqueId(), response);
     }
 
     public void destroy() {
@@ -121,15 +123,20 @@ public class SignGUI implements Listener {
 
         @Override
         public void onPacketReceiving(PacketEvent event) {
+            //updating dat sign
+            WrapperPlayClientUpdateSign updateSign = new WrapperPlayClientUpdateSign(event.getPacket());
+
+
             final Player player = event.getPlayer();
             Vector v = signLocations.remove(player.getUniqueId());
             if (v == null) return;
-            List<Integer> list = event.getPacket().getIntegers().getValues();
-            if (list.get(0) != v.getBlockX()) return;
-            if (list.get(1) != v.getBlockY()) return;
-            if (list.get(2) != v.getBlockZ()) return;
 
-            final String[] lines = event.getPacket().getStringArrays().getValues().get(0);
+            //make sure its dat sign
+            if(updateSign.getX() != v.getBlockX()) return;
+            if(updateSign.getY() != v.getBlockY()) return;
+            if(updateSign.getZ() != v.getBlockZ()) return;
+
+            final String[] lines = updateSign.getLines();
             final SignGUIListener response = listeners.remove(event.getPlayer().getUniqueId());
             if (response != null) {
                 event.setCancelled(true);
@@ -140,7 +147,5 @@ public class SignGUI implements Listener {
                 });
             }
         }
-
     }
-
 }

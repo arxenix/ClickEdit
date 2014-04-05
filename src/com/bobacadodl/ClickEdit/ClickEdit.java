@@ -1,6 +1,5 @@
 package com.bobacadodl.ClickEdit;
 
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -24,7 +23,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 
 /**
  * User: bobacadodl
@@ -52,7 +50,7 @@ public class ClickEdit extends JavaPlugin implements Listener {
             Metrics metrics = new Metrics(this);
             metrics.start();
         } catch (IOException ex) {
-            Bukkit.getLogger().severe("[ClickEdit] Failed to enable metrics!");
+            getLogger().severe("Failed to enable metrics!");
         }
     }
 
@@ -149,7 +147,7 @@ public class ClickEdit extends JavaPlugin implements Listener {
                     return true;
                 }
             }
-            sender.sendMessage(ChatColor.DARK_AQUA + "==" + ChatColor.AQUA + "ClickEdit v" + this.getDescription().getVersion() + ChatColor.DARK_AQUA + "==");
+            sender.sendMessage(ChatColor.DARK_AQUA + "==" + ChatColor.AQUA + "ClickEdit v" + getDescription().getVersion() + ChatColor.DARK_AQUA + "==");
             sender.sendMessage(ChatColor.DARK_GREEN + "- by bobacadodl");
             sender.sendMessage(ChatColor.AQUA + "• /clickedit edit" + ChatColor.GRAY + " - Edit the sign you're looking at");
             sender.sendMessage(ChatColor.AQUA + "• /clickedit edit [line #] [text]" + ChatColor.GRAY + " - Edit a line of the sign you are looking at");
@@ -159,12 +157,6 @@ public class ClickEdit extends JavaPlugin implements Listener {
     }
 
     public boolean isInt(String s) {
-        /*try {
-            Integer.parseInt(s);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }*/
         return StringUtils.isNumeric(s);
     }
 
